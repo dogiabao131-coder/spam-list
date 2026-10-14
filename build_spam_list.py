@@ -51,13 +51,21 @@ def main():
     counts = collections.Counter()
     offset = pages = rows = 0
     while True:
-        try:
-            page = fetch({**window, 'offset': offset}, key)
-        except urllib.error.HTTPError as error:
-            if error.code == 429:
-                print('rate limit reached after %d requests - writing what was fetched' % pages, file=sys.stderr)
+        page = None
+        # The API answers 429 when requests come too fast; wait and ask again a few times before giving up.
+        for attempt in range(6):
+            try:
+                page = fetch({**window, 'offset': offset}, key)
                 break
-            raise
+            except urllib.error.HTTPError as error:
+                if error.code != 429:
+                    raise
+                wait = int(error.headers.get('Retry-After') or 0) or 15 * (attempt + 1)
+                print('429 after %d requests - waiting %ds' % (pages, wait), file=sys.stderr)
+                time.sleep(wait)
+        if page is None:
+            print('rate limit reached after %d requests - writing what was fetched' % pages, file=sys.stderr)
+            break
         records = page.get('data') or []
         pages += 1
         for record in records:
@@ -71,7 +79,7 @@ def main():
         if len(records) < PAGE or (args.max_pages and pages >= args.max_pages):
             break
         offset += PAGE
-        time.sleep(0.2)
+        time.sleep(1.0)
 
     with open(args.out, 'w', encoding='utf-8', newline='\n') as out:
         out.write('# source=FTC DNC reported calls; from=%s; to=%s; complaints=%d; numbers=%d\n'
