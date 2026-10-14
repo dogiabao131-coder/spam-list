@@ -9,9 +9,11 @@ A list of US phone numbers that consumers reported to the FTC as unwanted calls,
   The FTC states that none of the reported information is verified: a number is here because people
   complained about it, nothing more. Numbers can be spoofed or reported by mistake.
 - **Window:** complaints created in the last 14 days.
-- **Update:** the `Update spam list` workflow runs `build_spam_list.py` daily and commits the result.
-  It needs a free [api.data.gov](https://api.data.gov/signup/) key stored as the repository secret
-  `DATA_GOV_API_KEY`.
+- **Update:** the `Update spam list` workflow runs daily. It fetches the last 7 days of complaints (the FTC publishes several days late)
+  into `days/YYYY-MM-DD.csv` (`build_spam_list.py fetch`), adds up the last 14 day files into
+  `spam_list.csv` (`build_spam_list.py build`) and commits both. Fetching only a few days per run
+  keeps it under the FTC API's burst limit. It needs a free
+  [api.data.gov](https://api.data.gov/signup/) key stored as the repository secret `DATA_GOV_API_KEY`.
 
 Raw file for apps:
 `https://raw.githubusercontent.com/dogiabao131-coder/spam-list/main/spam_list.csv`
